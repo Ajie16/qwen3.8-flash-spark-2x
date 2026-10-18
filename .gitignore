@@ -1,5 +1,8 @@
 __pycache__/
 *.pyc
-b12x-patch/
+# Extracted upstream vLLM sources, kept only for regenerating the patch: vendored
+# Apache-2.0 code, not ours. The patch itself and its explanation are tracked.
+fp4-b12x/b12x-patch/b12x_startup.py
+fp4-b12x/b12x-patch/toolchoice/protocol.orig.py
 .env
 fp4-b12x/b12x-patch/toolchoice/protocol.orig.py
