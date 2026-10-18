@@ -165,6 +165,11 @@ if [[ -f "$PATCH_PROTOCOL" ]]; then
     echo "  protocol.py patch: enabled"
 fi
 
+# --enable-prompt-tokens-details is not optional if the gateway is to see cache behaviour. Without
+# it vLLM omits usage.prompt_tokens_details.cached_tokens entirely (entrypoints/openai/completion/
+# serving.py populates the field only when the flag is set), even though prefix caching is on and the
+# log reports a healthy hit rate. AxonHub then records prompt_cached_tokens=0 for every request and
+# its cache-hit panel reads zero. NVIDIA's reference command sets it; this script had dropped it.
 echo "[3/3] launch rank $ROLE (bind $BIND_HOST${HEADLESS:+, headless})"
 docker run -d --name "$NAME" --init --restart no \
     --gpus all --ipc host --network host --shm-size=16g \
@@ -223,6 +228,7 @@ docker run -d --name "$NAME" --init --restart no \
     --mamba-cache-mode align \
     --mamba-ssm-cache-dtype "${MAMBA_SSM_DTYPE:-float32}" \
     --enable-prefix-caching \
+    --enable-prompt-tokens-details \
     --enable-chunked-prefill \
     --dtype bfloat16 \
     --kv-cache-dtype fp8 \

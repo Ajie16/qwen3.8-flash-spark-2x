@@ -633,3 +633,42 @@ prefill ≈ 2615 × (1 + 0.10 × 0.58) ≈ 2,767        (+6%)
 **所以追极限的话放开时钟比改任何参数都有效（其他参数都已调到头），但上限只有 +12%。**
 
 **当前固定在 2000 MHz。**
+
+## 网关为什么看不到缓存命中率
+
+**症状**：vLLM 日志明明写着 `Prefix cache hit rate: 95.6%`，但网关（AxonHub）的缓存命中面板一直是 0。
+
+**原因**：vLLM 只有在带 `--enable-prompt-tokens-details` 时才会在响应里输出
+`usage.prompt_tokens_details.cached_tokens`：
+
+```python
+# entrypoints/openai/completion/serving.py
+if self.enable_prompt_tokens_details and num_cached_tokens is not None:
+    final_usage_info.prompt_tokens_details = PromptTokenUsageInfo(
+        cached_tokens=num_cached_tokens
+    )
+```
+
+**开关默认 `False`，字段就完全不出现** —— 网关拿不到任何数字，只能记 0。前缀缓存本身一直是工作的，
+只是这个数字没有被上报。
+
+NVIDIA 的参考启动命令里是有这个参数的（紧跟 `--enable-prefix-caching` 之后），本仓早期版本漏掉了。
+
+**修复前后直连实测（同一前缀发三次）：**
+
+| 次数 | 修复前 | 修复后 |
+|---|---|---|
+| 第 1 次（冷） | 无字段 | `cached=0` |
+| 第 2 次 | **无字段** | **`cached=9019`** |
+| 第 3 次 | **无字段** | **`cached=9019`** |
+
+**经网关的真实流量（Multica → AxonHub）：**
+
+```
+prompt=27,881  cached=24,271   （87%）
+prompt=29,988  cached=27,881   （93%）
+prompt=31,270  cached=30,497   （98%）
+prompt=31,820  cached=31,374   （99%）
+```
+
+**教训：`--enable-prefix-caching` 只让缓存工作，`--enable-prompt-tokens-details` 才让它可观测。两个都要有。**
