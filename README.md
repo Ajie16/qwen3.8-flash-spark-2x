@@ -116,6 +116,22 @@ a defensible choice for memory reasons (each doubling costs 6–7 GiB per node f
 
 ## License
 
-The recipe scripts are provided as-is. The checkpoint is subject to the **NVIDIA Open Model
-Agreement** and the **Qwen Community License**, and the abliterated variant additionally derives from
-`huihui-ai/Huihui-Qwen3.8-Flash-Next-abliterated-v2-GGUF`. No model weights are redistributed here.
+**The code in this repository is MIT** -- see [LICENSE](LICENSE). That covers the launch scripts, the
+restart wrapper, the benchmark and verification tools, and the documentation.
+
+**That is not the whole story, and it matters.** The MIT grant applies only to what is in this repo.
+It does not extend to anything you point it at:
+
+- **The checkpoint.** `nvidia/Qwen3.8-Flash-Next-FP4-Local` is distributed under the **NVIDIA Open
+  Model Agreement**, and the base model under the **Qwen Community License**. Both carry their own
+  terms for use and redistribution.
+- **The abliterated variant** additionally derives from
+  `huihui-ai/Huihui-Qwen3.8-Flash-Next-abliterated-v2-GGUF`, which was itself produced from
+  `Qwen/Qwen3.8-Flash-Next` through the Unsloth GGUF pipeline, plus a delta from
+  `unsloth/Qwen3.8-Flash-Next-GGUF`. Read all of those before deploying.
+- **The image.** `eugr/spark-vllm-b12x` bundles vLLM (Apache-2.0) and NVIDIA's B12X components, which
+  have their own licenses.
+
+No model weights are redistributed here. The upstream reference recipe
+(`qwen3.8-flash-next-nvfp4-cluster.yaml`) is copied verbatim from `eugr/spark-vllm-docker` for
+reference and remains under that project's terms.
