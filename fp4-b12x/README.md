@@ -52,6 +52,7 @@ shipped as a fix.
 |---|---|
 | `serve-fp4-tp2.sh` | launcher. `0` = head (serves the API), `1` = worker (headless). Start worker first. |
 | `tf-restart.sh` | one command: stop → drop caches → clear /dev/shm → start → wait → report KV and memory. Prints the root cause on failure. Use this rather than the launcher directly. |
+| `verify.py` | deploy gate: reachability, model id, generation, thinking toggle, streaming, metrics, vision, plus an acceptance report. |
 | `bench.py` | `decode` / `prefill` / `accept` modes. Replaces five overlapping scripts. |
 | `apply_tuning_patch.py` | **archived dead end.** Attempt at making nbt>4096 work; it does not. |
 | `b12x_startup.py.patch` | the diff that script produces, for the record. |

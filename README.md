@@ -49,6 +49,7 @@ stock vLLM) aborts the workers. Pinned deliberately.
 |---|---|
 | `serve-fp4-tp2.sh` | launcher. `0` = head (serves the API), `1` = worker (headless). Start the worker first. |
 | `tf-restart.sh` | one command: sync → stop → drop caches → clear `/dev/shm` → start → wait → report. Use this. |
+| **`verify.py`** | **deploy gate.** Checks reachability, model id, generation, thinking on/off, streaming, metrics, vision, and reports acceptance. Exits non-zero on failure. |
 | `bench.py` | `decode` / `prefill` / `accept` benchmark modes. |
 | `serve-fp4-tp1.sh`, `serve-fp4-local.sh` | single-node variants. |
 | `pull_via_proxy.py`, `fetch_hf_repo.py` | image and checkpoint fetch helpers. |
