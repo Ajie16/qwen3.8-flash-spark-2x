@@ -92,10 +92,5 @@ recompilation on the next start and solves nothing.
 
 ## Secrets
 
-Nothing here holds credentials. `tf-restart.sh` reads a sudo password from `~/sudo-pass` **on the
-host** with `sudo -S`; the file itself is not in this repo and must not be added. Set
-`SUDO_PASS_FILE=/path` to point elsewhere, or leave the file absent and the script skips the steps
-that need root (it prints which).
-
-All site-specific values (node addresses, ssh aliases, model paths) are placeholders with generic
+Nothing here holds credentials. Two steps in `tf-restart.sh` need root and read a password from the file named by `SUDO_PASS_FILE`; there is no default path, so they are skipped unless you set it. See the note at the top of that script.All site-specific values (node addresses, ssh aliases, model paths) are placeholders with generic
 defaults; override them via environment variables. Nothing here contains credentials.

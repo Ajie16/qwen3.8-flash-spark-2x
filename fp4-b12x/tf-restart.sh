@@ -29,11 +29,11 @@
 #   ./tf-restart.sh --mtp-lm-head 0               # MTP head gets a BF16 LM head instead of NVFP4
 #   ./tf-restart.sh --draft-sample probabilistic      # MTP drafts sampled, not argmax (matters at T>0)
 #   ./tf-restart.sh --fast                    # cap CUDA graph capture sizes, ~60-80 s faster start
-# The sudo password, when needed for drop_caches and /dev/shm cleanup, is read from
-# ${SUDO_PASS_FILE:-$HOME/sudo-pass} on each host. That file is deliberately not in this repo: it is
-# host-local, mode 600, and referenced only by path. If it is absent both steps are skipped with a
-# printed note and the script still works -- it just stops reclaiming the ~14 GiB that /dev/shm and
-# the page cache would otherwise hold.
+# Two steps need root (drop_caches and clearing /dev/shm). They read a password from the file named by
+# SUDO_PASS_FILE. There is deliberately NO default path: set it in your environment if you want those
+# steps to run, e.g. SUDO_PASS_FILE=/run/secrets/sudo ./tf-restart.sh. When it is unset or the file is
+# missing, both steps are skipped with a printed note and everything else still works -- you just
+# stop reclaiming the ~14 GiB that /dev/shm and the page cache would otherwise hold.
 set -uo pipefail
 
 # Resolve against this script, not a hardcoded path: a stale absolute path here silently ran a
@@ -154,15 +154,15 @@ ssh "$REMOTE_HOST" 'docker rm -f qwen38-fp4-tp2 >/dev/null 2>&1' && echo "  rank
 echo "[1.7/4] dropping page cache (vLLM checks MemFree, not MemAvailable)"
 for target in local remote; do
     if [[ "$target" == local ]]; then
-        if [[ -f "${SUDO_PASS_FILE:-$HOME/sudo-pass}" ]]; then
-            P=$(cat "${SUDO_PASS_FILE:-$HOME/sudo-pass}")
+        if [[ -f "${SUDO_PASS_FILE:-}" ]]; then
+            P=$(cat "${SUDO_PASS_FILE:-}")
             echo "$P" | sudo -S sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null
             printf "  0d97 MemFree now %s GiB\n" "$(awk '/MemFree/{printf "%.1f", $2/1048576}' /proc/meminfo)"
         else
             echo "  0d97 skipped (no sudo password file)"
         fi
     else
-        ssh "$REMOTE_HOST" 'if [ -f ${SUDO_PASS_FILE:-$HOME/sudo-pass} ]; then P=$(cat ${SUDO_PASS_FILE:-$HOME/sudo-pass}); echo "$P" | sudo -S sh -c "sync; echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null; fi; printf "  ac8f MemFree now %s GiB\n" "$(awk "/MemFree/{printf \"%0.1f\", \$2/1048576}" /proc/meminfo)"'
+        ssh "$REMOTE_HOST" 'if [ -f ${SUDO_PASS_FILE:-} ]; then P=$(cat ${SUDO_PASS_FILE:-}); echo "$P" | sudo -S sh -c "sync; echo 3 > /proc/sys/vm/drop_caches" 2>/dev/null; fi; printf "  ac8f MemFree now %s GiB\n" "$(awk "/MemFree/{printf \"%0.1f\", \$2/1048576}" /proc/meminfo)"'
     fi
 done
 
@@ -174,14 +174,14 @@ done
 # visible files to account for it (du reports 7.4 MB; the psm_* entries are sparse). Clearing the
 # directory while nothing is running reclaims it, and the previous run's files are garbage regardless.
 echo "[1.6/4] clearing /dev/shm (leftover psm_* from earlier runs, ~14 GiB of Shmem)"
-if [[ -f "${SUDO_PASS_FILE:-$HOME/sudo-pass}" ]]; then
-    P=$(cat "${SUDO_PASS_FILE:-$HOME/sudo-pass}")
+if [[ -f "${SUDO_PASS_FILE:-}" ]]; then
+    P=$(cat "${SUDO_PASS_FILE:-}")
     B=$(awk '/^Shmem/{printf "%.1f", $2/1048576}' /proc/meminfo)
     echo "$P" | sudo -S sh -c 'rm -rf /dev/shm/* 2>/dev/null' 2>/dev/null
     A=$(awk '/^Shmem/{printf "%.1f", $2/1048576}' /proc/meminfo)
     printf "  0d97 Shmem %s -> %s GiB\n" "$B" "$A"
 fi
-ssh "$REMOTE_HOST" 'if [ -f ${SUDO_PASS_FILE:-$HOME/sudo-pass} ]; then P=$(cat ${SUDO_PASS_FILE:-$HOME/sudo-pass}); B=$(awk "/^Shmem/{printf \"%0.1f\", \$2/1048576}" /proc/meminfo); echo "$P" | sudo -S sh -c "rm -rf /dev/shm/* 2>/dev/null" 2>/dev/null; A=$(awk "/^Shmem/{printf \"%0.1f\", \$2/1048576}" /proc/meminfo); printf "  ac8f Shmem %s -> %s GiB\n" "$B" "$A"; fi'
+ssh "$REMOTE_HOST" 'if [ -f ${SUDO_PASS_FILE:-} ]; then P=$(cat ${SUDO_PASS_FILE:-}); B=$(awk "/^Shmem/{printf \"%0.1f\", \$2/1048576}" /proc/meminfo); echo "$P" | sudo -S sh -c "rm -rf /dev/shm/* 2>/dev/null" 2>/dev/null; A=$(awk "/^Shmem/{printf \"%0.1f\", \$2/1048576}" /proc/meminfo); printf "  ac8f Shmem %s -> %s GiB\n" "$B" "$A"; fi'
 
 echo "[2/4] starting rank1 (worker, headless)"
 MODEL_DIR="$MODEL" MTP_LM_HEAD="$MTPLH" DRAFT_SAMPLE="$DRAFTS" bash "$SCRIPTS_DIR/serve-fp4-tp2.sh" 1 >/dev/null 2>&1

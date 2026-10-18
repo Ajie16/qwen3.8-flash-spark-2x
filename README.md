@@ -63,7 +63,7 @@ Every site-specific value is overridable, with a generic default:
 HEAD_IP=10.0.0.1                # rank 0 on the RoCE link
 REMOTE_HOST=node0               # ssh alias for rank 0
 MODEL_DIR=$HOME/models/Qwen3.8-Flash-Next-FP4-Local
-SUDO_PASS_FILE=$HOME/sudo-pass  # optional; steps needing root are skipped if absent
+SUDO_PASS_FILE=               # optional; unset = root steps skipped
 ```
 
 `tf-restart.sh` drops the page cache and clears `/dev/shm` because **vLLM compares
