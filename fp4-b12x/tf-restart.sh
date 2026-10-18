@@ -39,7 +39,8 @@ set -uo pipefail
 # Resolve against this script, not a hardcoded path: a stale absolute path here silently ran a
 # different copy of serve-fp4-tp2.sh, so edits to GMU looked like they had no effect.
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REMOTE_SCRIPT=$HOME/serve-fp4-tp2.sh
+REMOTE_DIR=~/workspace/dgx-qwen3.8-flash
+REMOTE_SCRIPT=$REMOTE_DIR/serve-fp4-tp2.sh
 REMOTE_HOST="${REMOTE_HOST:-node0}"
 
 PLE=""
@@ -67,6 +68,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Everything for this deployment lives under ~/workspace/dgx-qwen3.8-flash on the head node too: the
+# launcher, the protocol.py patch it mounts, and the recipe trees. Keeping them in $HOME put deploy
+# code outside the workspace, and serve-fp4-tp2.sh resolves the patch relative to its own directory,
+# so the two must move together.
+#
 # Push this directory's launcher to the head node before doing anything else, so the two ranks always
 # run the same file. Rank 1 runs $SCRIPTS_DIR/serve-fp4-tp2.sh and rank 0 runs $REMOTE_SCRIPT; when
 # only one of them was edited the ranks silently diverged (different PLE modes both start fine, and
@@ -86,8 +92,8 @@ if [[ -f "$PATCH_PROTOCOL" ]]; then
     echo "[cfg] syncing protocol.py patch to $REMOTE_HOST"
     # Relative paths: scp resolves them against the remote home directory, whereas $HOME inside
     # a scp target is not expanded by the remote shell.
-    ssh "$REMOTE_HOST" "mkdir -p b12x-patch/toolchoice" 2>/dev/null
-    scp -q "$PATCH_PROTOCOL" "$REMOTE_HOST:b12x-patch/toolchoice/protocol.py" || {
+    ssh "$REMOTE_HOST" "mkdir -p workspace/dgx-qwen3.8-flash/b12x-patch/toolchoice" 2>/dev/null
+    scp -q "$PATCH_PROTOCOL" "$REMOTE_HOST:workspace/dgx-qwen3.8-flash/b12x-patch/toolchoice/protocol.py" || {
         echo "  FAILED to copy the protocol.py patch -- rank 0 would run unpatched"
         exit 1
     }
