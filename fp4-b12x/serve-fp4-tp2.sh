@@ -150,6 +150,21 @@ fi
 # ~80 GiB again; 0.64 (77.9 GiB) is the value that fits reliably.
 if [[ "$ROLE" == "0" ]]; then GMU="${GMU:-0.70}"; else GMU="${GMU:-0.64}"; fi
 
+# Optional bind-mount patch: vLLM rejects a tool_choice that has no tools to choose from,
+# which is the exact shape of Codex's remote-compaction request (a summarisation with no
+# tools). A 400 there fails the compaction and takes down the whole agent task. The patch
+# drops "auto"/"none" when tools are absent and leaves named-tool/"required" contradictions
+# raising. Mount only when the file is present, so the image can still be run unpatched.
+# Resolve this script's own directory: the launcher runs from the repo on rank 1 and from $HOME on
+# rank 0, so the patch has to be found relative to whichever copy is executing.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATCH_PROTOCOL="$SCRIPT_DIR/b12x-patch/toolchoice/protocol.py"
+PROTOCOL_MOUNT=""
+if [[ -f "$PATCH_PROTOCOL" ]]; then
+    PROTOCOL_MOUNT="-v $PATCH_PROTOCOL:/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/openai/chat_completion/protocol.py:ro"
+    echo "  protocol.py patch: enabled"
+fi
+
 echo "[3/3] launch rank $ROLE (bind $BIND_HOST${HEADLESS:+, headless})"
 docker run -d --name "$NAME" --init --restart no \
     --gpus all --ipc host --network host --shm-size=16g \
@@ -161,6 +176,7 @@ docker run -d --name "$NAME" --init --restart no \
     -v "$CACHE/flashinfer:/root/.cache/flashinfer" \
     -v "$CACHE/triton:/root/.triton" \
     -v "$CACHE/b12x:/root/.cache/b12x" \
+    $PROTOCOL_MOUNT \
     -e HF_HUB_OFFLINE=1 \
     -e NCCL_DEBUG=INFO \
     -e NCCL_DEBUG_SUBSYS=INIT,NET \
