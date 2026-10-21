@@ -193,7 +193,6 @@ docker run -d --name "$NAME" --init --restart no \
     -e NCCL_NET_GDR_LEVEL=SYS \
     -e GLOO_SOCKET_IFNAME=enP2p1s0f0np0 \
     -e TP_SOCKET_IFNAME=enP2p1s0f0np0 \
-    -e VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 \
     -e VLLM_ENABLE_ROCE_ALLREDUCE=1 \
     -e VLLM_ROCE_ALLREDUCE_MAX_SIZE=2MB \
     -e NCCL_BUFFSIZE=1048576 \
@@ -236,9 +235,8 @@ docker run -d --name "$NAME" --init --restart no \
     --quantization modelopt_mixed \
     --block-size 16 \
     --load-format b12x \
-    --max-model-len "${MAXLEN:-524288}" \
-    --hf-overrides "{\"text_config\": {\"max_position_embeddings\": ${MAXLEN:-524288}, \"rope_parameters\": {\"mrope_interleaved\": true, \"mrope_section\": [11, 11, 10], \"rope_type\": \"yarn\", \"rope_theta\": 10000000, \"partial_rotary_factor\": 0.25, \"factor\": ${YARN_FACTOR:-2.0}, \"original_max_position_embeddings\": 262144}}}" \
-    --max-num-seqs "${SEQS:-6}" \
+    --max-model-len "${MAXLEN:-262144}" \
+    --max-num-seqs "${SEQS:-8}" \
     --max-num-batched-tokens 8192 \
     --speculative-config '{"method":"mtp","num_speculative_tokens":4,"draft_tensor_parallel_size":2,"draft_sample_method":"'${DRAFT_SAMPLE:-greedy}'"}' \
     --gdn-decode-kernel b12x \
